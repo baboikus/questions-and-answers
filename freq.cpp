@@ -11,6 +11,7 @@
 #include <functional>
 #include <locale>
 #include <vector>
+#include <filesystem>
 
 using namespace std;
 // class for case insensitive immutable string
@@ -115,12 +116,35 @@ istream& operator>>(istream& is, Word& w){
     return is;
 }
 
+constexpr int NOT_ENOUGHT_ARGS_ERROR_CODE = 1;
+constexpr int TOO_MANY_ARGS_ERROR_CODE = 2;
+constexpr int INPUT_FILE_NOT_EXISTS = 3;
+constexpr int OUTPUT_FILE_ALREADY_EXISTS = 4;
 
 /// TODO args count and file existence checks
 /// TODO need additional test examples
 /// TODO optimize buffer filling in >> operator
 /// TODO run valgrind
 int main(int argc, char *argv[]) {
+    // first we check argc value and existed/non existed files
+    if(argc < 3) {
+        cout << "not enough args" << endl;
+        return NOT_ENOUGHT_ARGS_ERROR_CODE;
+    }
+    if(argc > 3) {
+        cout << "too many args" << endl;
+        return TOO_MANY_ARGS_ERROR_CODE;
+    }
+    if(!filesystem::exists(filesystem::path(argv[1]))) {
+        cout << argv[1] << " non exists" << endl;
+        return INPUT_FILE_NOT_EXISTS;
+    }
+    if(filesystem::exists(filesystem::path(argv[2]))) {
+        cout << argv[2] << " already exists" << endl;
+        return OUTPUT_FILE_ALREADY_EXISTS;
+    }
+
+
     // we are using hash-table counter like (word->word_frequency)
     unordered_map<Word, uint> counter;
 
