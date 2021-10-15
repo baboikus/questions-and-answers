@@ -13,30 +13,25 @@
 #include <vector>
 
 using namespace std;
-
-struct LatinCharTraits : public char_traits<char> {
-    static void assign(char_type& r, const char_type& a){
-        r = a;
-    }
-};
-using LatinString = basic_string<char, LatinCharTraits>;
-
 // class for case insensitive immutable string
 class Word {
 public:
-    // we don't want any spontaneous type conversion or additional memmory copy
-    explicit Word(LatinString &&s) :
-        data_(s)
-    {
-        for(size_t i = 0; i < data_.size(); ++i) {
-            // it's always ASCII symbols, so tolower usage is safe
-            data_[i] = tolower(data_[i]);
-        }
-        // we don't need to evaluate hash more than one time for immutable data
-       // hash_ = std::hash<string>{}(data_);
+    Word(){
     }
 
-    const LatinString& data() const {
+    // we don't want any spontaneous type conversion or additional memmory copy
+    explicit Word(string &&s) :
+        data_(s) {
+        refresh();
+    }
+
+    const Word& operator = (string &&s) {
+        data_ = s;
+        refresh();
+        return *this;
+    }
+
+    const string& data() const {
         return data_;
     }
 
@@ -54,12 +49,25 @@ public:
         return data_.compare(w.data_) < 0;
     }
 
+     static bool isLatinSymbol(const char c) {
+         return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+     }
+
 private:
     // let's forbid this constructor for now
-    Word(const LatinString &s) = delete;
+    explicit Word(const string &s) = delete;
 
-    LatinString data_;
-    size_t hash_;
+    void refresh() {
+        for(size_t i = 0; i < data_.size(); ++i) {
+            // it's always ASCII symbols, so tolower usage is safe
+            data_[i] = tolower(data_[i]);
+        }
+        //we don't need to evaluate hash more than one time for immutable data
+        hash_ = std::hash<string>{}(data_);
+    }
+
+    string data_;
+    size_t hash_ = 0;
 };
 
 // we need to specify hash function for class Word
@@ -71,20 +79,58 @@ namespace std {
     };
 }
 
-/// TODO args count checks
-/// TODO ignoring non alphabet symbols
+// let's incapsulate skips of all non latin chars here
+istream& operator>>(istream& is, Word& w){
+    istream::sentry s(is);
+    // we need at least one memmory allocation for each word here anyway
+    string buffer;
+    // trimming next word from non latin characters from both sides
+    if (s) {
+        char c;
+        while(is.good()) {
+            c = is.get();
+           // cout << c;
+            if(Word::isLatinSymbol(c)) {
+                break;
+            }
+        }
+        while(is.good()) {
+            // we could optimize buffer filling later
+            buffer += c;
+            c = is.get();
+            if(!Word::isLatinSymbol(c)) {
+                break;
+            }
+        }
+        while(is.good()) {
+            if(!Word::isLatinSymbol(is.peek())) {
+                is.get();
+            }
+            else {
+                break;
+            }
+        }
+    }
+    w = move(buffer);
+    return is;
+}
+
+
+/// TODO args count and file existence checks
 /// TODO need additional test examples
+/// TODO optimize buffer filling in >> operator
 /// TODO run valgrind
 int main(int argc, char *argv[]) {
     // we are using hash-table counter like (word->word_frequency)
     unordered_map<Word, uint> counter;
 
     // argv[1] should be input file
-    basic_ifstream<char, LatinCharTraits> inputFile(argv[1]);
+    ifstream inputFile(argv[1]);
     while(inputFile.good()) {
-        LatinString s;
-        inputFile >> s;
-        counter[Word(move(s))]++;
+        Word w;
+        inputFile >> w;
+     //   cout << w.data() << " " << w.data().size() <<  endl;
+        counter[w]++;
     }
 
     // for sorting we need some additional memmory. lets try to use as small as possible
