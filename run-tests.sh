@@ -62,7 +62,7 @@ rm -f ./test_data/existed_output.txt
 touch ./test_data/existed_output.txt
 ./freq ./test_data/in1.txt ./test_data/existed_output.txt
 if [ $? -eq 4 ]; then
-    printf "${GREEN} pass ${DEFAULT}\n"
+    printf "${GREEN}pass${DEFAULT}\n"
 else
-    printf "${RED} fail ${DEFAULT}\n"
+    printf "${RED}fail${DEFAULT}\n"
 fi

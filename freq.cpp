@@ -14,7 +14,7 @@
 #include <filesystem>
 
 using namespace std;
-// class for case insensitive immutable string
+// class for case insensitive ALMOST immutable string
 class Word {
 public:
     Word(){
@@ -84,47 +84,56 @@ namespace std {
 istream& operator>>(istream& is, Word& w){
     istream::sentry s(is);
     // we need at least one memmory allocation for each word here anyway
-    string buffer;
     // trimming next word from non latin characters from both sides
-    if (s) {
+    if (s && is.good()) {
         char c;
+        // trim before word start
         while(is.good()) {
             c = is.get();
-           // cout << c;
             if(Word::isLatinSymbol(c)) {
                 break;
             }
         }
+        // this part is ugly, but it could reduce number of memmory allocations
+        // while we filling string buffer
+        const auto from = is.tellg();
         while(is.good()) {
             // we could optimize buffer filling later
-            buffer += c;
             c = is.get();
             if(!Word::isLatinSymbol(c)) {
                 break;
             }
         }
+        string buffer;
+        buffer.resize(is.tellg() - from);
+        is.seekg(from);
+        is.unget();
+        for(size_t i = 0; i < buffer.size() && is.good(); ++i) {
+            buffer[i] = is.get();
+        }
+
+        // trim after word end
         while(is.good()) {
             if(!Word::isLatinSymbol(is.peek())) {
-                is.get();
+                is.ignore();
             }
             else {
                 break;
             }
         }
+
+        // finally passing buffered data to word
+        w = move(buffer);
     }
-    w = move(buffer);
     return is;
 }
 
 constexpr int NOT_ENOUGHT_ARGS_ERROR_CODE = 1;
 constexpr int TOO_MANY_ARGS_ERROR_CODE = 2;
-constexpr int INPUT_FILE_NOT_EXISTS = 3;
-constexpr int OUTPUT_FILE_ALREADY_EXISTS = 4;
+constexpr int INPUT_FILE_NOT_EXISTS_ERROR_CODE = 3;
+constexpr int OUTPUT_FILE_ALREADY_EXISTS_ERROR_CODE = 4;
+constexpr int CAN_OPEN_FILE_ERROR_CODE = 5;
 
-/// TODO args count and file existence checks
-/// TODO need additional test examples
-/// TODO optimize buffer filling in >> operator
-/// TODO run valgrind
 int main(int argc, char *argv[]) {
     // first we check argc value and existed/non existed files
     if(argc < 3) {
@@ -137,11 +146,11 @@ int main(int argc, char *argv[]) {
     }
     if(!filesystem::exists(filesystem::path(argv[1]))) {
         cout << argv[1] << " non exists" << endl;
-        return INPUT_FILE_NOT_EXISTS;
+        return INPUT_FILE_NOT_EXISTS_ERROR_CODE;
     }
     if(filesystem::exists(filesystem::path(argv[2]))) {
         cout << argv[2] << " already exists" << endl;
-        return OUTPUT_FILE_ALREADY_EXISTS;
+        return OUTPUT_FILE_ALREADY_EXISTS_ERROR_CODE;
     }
 
 
@@ -150,10 +159,13 @@ int main(int argc, char *argv[]) {
 
     // argv[1] should be input file
     ifstream inputFile(argv[1]);
+    if(inputFile.fail() || inputFile.bad()) {
+        cout << "can't open " << argv[1] << endl;
+        return CAN_OPEN_FILE_ERROR_CODE;
+    }
     while(inputFile.good()) {
         Word w;
         inputFile >> w;
-     //   cout << w.data() << " " << w.data().size() <<  endl;
         counter[w]++;
     }
 
@@ -178,6 +190,10 @@ int main(int argc, char *argv[]) {
 
     // argv[2] should be output file
     ofstream freqFile(argv[2]);
+    if(freqFile.fail() || freqFile.bad()) {
+        cout << "can't open " << argv[2] << endl;
+        return CAN_OPEN_FILE_ERROR_CODE;
+    }
     for(auto i : buckets) {
         // i should be a pair like (word, word_frequency)
         freqFile << i->second << " " << i->first.data().c_str() << endl;
