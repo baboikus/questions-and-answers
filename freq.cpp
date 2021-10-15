@@ -10,14 +10,22 @@
 #include <unordered_map>
 #include <functional>
 #include <locale>
+#include <vector>
 
 using namespace std;
+
+struct LatinCharTraits : public char_traits<char> {
+    static void assign(char_type& r, const char_type& a){
+        r = a;
+    }
+};
+using LatinString = basic_string<char, LatinCharTraits>;
 
 // class for case insensitive immutable string
 class Word {
 public:
     // we don't want any spontaneous type conversion or additional memmory copy
-    explicit Word(string &&s) :
+    explicit Word(LatinString &&s) :
         data_(s)
     {
         for(size_t i = 0; i < data_.size(); ++i) {
@@ -25,10 +33,10 @@ public:
             data_[i] = tolower(data_[i]);
         }
         // we don't need to evaluate hash more than one time for immutable data
-        hash_ = std::hash<string>{}(data_);
+       // hash_ = std::hash<string>{}(data_);
     }
 
-    const string& data() const {
+    const LatinString& data() const {
         return data_;
     }
 
@@ -48,9 +56,9 @@ public:
 
 private:
     // let's forbid this constructor for now
-    Word(const string &s) = delete;
+    Word(const LatinString &s) = delete;
 
-    string data_;
+    LatinString data_;
     size_t hash_;
 };
 
@@ -72,13 +80,14 @@ int main(int argc, char *argv[]) {
     unordered_map<Word, uint> counter;
 
     // argv[1] should be input file
-    ifstream inputFile(argv[1]);
+    basic_ifstream<char, LatinCharTraits> inputFile(argv[1]);
     while(inputFile.good()) {
-        string s;
+        LatinString s;
         inputFile >> s;
         counter[Word(move(s))]++;
     }
 
+    // for sorting we need some additional memmory. lets try to use as small as possible
     vector<decltype(counter.cbegin())> buckets;
     buckets.reserve(counter.size());
     for(auto i = counter.cbegin(); i != counter.cend(); ++i) {
@@ -101,7 +110,7 @@ int main(int argc, char *argv[]) {
     ofstream freqFile(argv[2]);
     for(auto i : buckets) {
         // i should be a pair like (word, word_frequency)
-        freqFile << i->second << " " << i->first.data() << endl;
+        freqFile << i->second << " " << i->first.data().c_str() << endl;
     }
 
     // always close your files!
