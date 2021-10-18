@@ -27,6 +27,14 @@ else
     printf "${RED}fail${DEFAULT}\n"
 fi
 
+echo 'sample huge sorting crash check...'
+rm -f ./test_data/sample_huge_out.txt
+./freq ./test_data/sample_huge_in.txt ./test_data/sample_huge_out.txt
+if [ $? -eq 0 ]; then
+    printf "${GREEN}pass${DEFAULT}\n"
+else
+    printf "${RED}fail${DEFAULT}\n"
+fi
 
 echo 'not enought args check...'
 ./freq ./test_data/in2.txt

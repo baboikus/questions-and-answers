@@ -163,6 +163,7 @@ int main(int argc, char *argv[]) {
         cout << "can't open " << argv[1] << endl;
         return CAN_OPEN_FILE_ERROR_CODE;
     }
+    int i = 0;
     while(inputFile.good()) {
         Word w;
         inputFile >> w;
@@ -180,11 +181,11 @@ int main(int argc, char *argv[]) {
     sort(buckets.begin(),
          buckets.end(),
          [](const auto &l, const auto &r) {
-             if(l->second > r->second) {
-                 return true;
+             if(l->second == r->second) {
+                 return l->first > r->first;
              }
              else {
-                 return l->first > r->first;
+                 return l->second > r->second;
              }
          });
 
