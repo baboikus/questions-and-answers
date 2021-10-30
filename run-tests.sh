@@ -5,7 +5,7 @@ GREEN=' \033[1;32m '
 DEFAULT=' \033[0m '
 
 rm -f ./freq
-g++ freq.cpp -std=c++17 -o freq
+g++ freq.cpp -std=c++17 -O3 -o freq
 
 
 echo 'doc example check...'

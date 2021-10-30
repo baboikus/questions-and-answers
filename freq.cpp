@@ -17,8 +17,7 @@ using namespace std;
 // class for case insensitive ALMOST immutable string
 class Word {
 public:
-    Word(){
-    }
+    Word() = default;
 
     // we don't want any spontaneous type conversion or additional memmory copy
     explicit Word(string &&s) :
@@ -32,27 +31,27 @@ public:
         return *this;
     }
 
-    const string& data() const {
+    inline const string& data() const {
         return data_;
     }
 
-    size_t hash() const {
+    inline size_t hash() const {
         return hash_;
     }
 
-    bool operator == (const Word &w) const {
+    inline bool operator == (const Word &w) const {
         // speed up the comparison!
         if(hash_ != w.hash_) return false;
         return data_ == w.data_;
     }
 
-    bool operator > (const Word &w) const {
+    inline bool operator > (const Word &w) const {
         return data_.compare(w.data_) < 0;
     }
 
-     static bool isLatinSymbol(const char c) {
-         return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
-     }
+    inline static bool isLatinSymbol(const char c) {
+        return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+    }
 
 private:
     // let's forbid this constructor for now
@@ -85,31 +84,26 @@ istream& operator>>(istream& is, Word& w){
     istream::sentry s(is);
     // we need at least one memmory allocation for each word here anyway
     // trimming next word from non latin characters from both sides
-    if (s && is.good()) {
+    if(s && is.good()) {
         char c;
-        // trim before word start
+
+        string buffer;
+        // trim before word start and collect word prefix
         while(is.good()) {
             c = is.get();
             if(Word::isLatinSymbol(c)) {
+                buffer += c;
                 break;
             }
         }
-        // this part is ugly, but it could reduce number of memmory allocations
-        // while we filling string buffer
-        const auto from = is.tellg();
+
+        // collecting word suffix
         while(is.good()) {
-            // we could optimize buffer filling later
             c = is.get();
             if(!Word::isLatinSymbol(c)) {
                 break;
             }
-        }
-        string buffer;
-        buffer.resize(is.tellg() - from);
-        is.seekg(from);
-        is.unget();
-        for(size_t i = 0; i < buffer.size() && is.good(); ++i) {
-            buffer[i] = is.get();
+            buffer += c;
         }
 
         // trim after word end
@@ -125,6 +119,7 @@ istream& operator>>(istream& is, Word& w){
         // finally passing buffered data to word
         w = move(buffer);
     }
+
     return is;
 }
 
